@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useSelector } from 'react-redux';
+import { AuthContext } from '@/App';
 import ApperIcon from "@/components/ApperIcon";
 import Button from "@/components/atoms/Button";
 
 const Header = ({ onAddClick }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { logout } = useContext(AuthContext);
+  const user = useSelector((state) => state.user.user);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -66,7 +70,7 @@ const Header = ({ onAddClick }) => {
             ))}
           </nav>
 
-          {/* Action Buttons */}
+{/* Action Buttons */}
           <div className="flex items-center space-x-3">
             <Button
               onClick={onAddClick}
@@ -76,6 +80,25 @@ const Header = ({ onAddClick }) => {
               <ApperIcon name="Plus" size={16} />
               <span>{getAddButtonText()}</span>
             </Button>
+
+            {/* User Menu */}
+            <div className="flex items-center space-x-3">
+              {user && (
+                <div className="hidden sm:flex items-center space-x-2 text-sm text-gray-600">
+                  <span>Welcome, {user.firstName || user.name || 'User'}</span>
+                </div>
+              )}
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={logout}
+                className="flex items-center space-x-1"
+              >
+                <ApperIcon name="LogOut" size={16} />
+                <span className="hidden sm:inline">Logout</span>
+              </Button>
+            </div>
 
             {/* Mobile menu button */}
             <button
@@ -120,7 +143,20 @@ const Header = ({ onAddClick }) => {
                 size="sm"
               >
                 <ApperIcon name="Plus" size={16} />
-                <span>{getAddButtonText()}</span>
+<span>{getAddButtonText()}</span>
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  logout();
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center justify-center space-x-2 mt-2"
+              >
+                <ApperIcon name="LogOut" size={16} />
+                <span>Logout</span>
               </Button>
             </div>
           </div>

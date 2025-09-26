@@ -1,113 +1,310 @@
-import notesData from "@/services/mockData/notes.json";
+import { toast } from 'react-toastify';
 
 class NoteService {
   constructor() {
-    this.storageKey = "dailyflow_notes";
-    this.loadFromStorage();
+    this.tableName = 'note_c';
+    this.apperClient = null;
+    this.initializeApperClient();
   }
 
-  loadFromStorage() {
-    const stored = localStorage.getItem(this.storageKey);
-    this.notes = stored ? JSON.parse(stored) : [...notesData];
-  }
-
-  saveToStorage() {
-    localStorage.setItem(this.storageKey, JSON.stringify(this.notes));
+  initializeApperClient() {
+    if (window.ApperSDK) {
+      const { ApperClient } = window.ApperSDK;
+      this.apperClient = new ApperClient({
+        apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+        apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+      });
+    }
   }
 
   async getAll() {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve([...this.notes]);
-      }, 300);
-    });
+    try {
+      if (!this.apperClient) this.initializeApperClient();
+      
+      const params = {
+        fields: [
+          {"field": {"Name": "Id"}},
+          {"field": {"Name": "Name"}},
+          {"field": {"Name": "title_c"}},
+          {"field": {"Name": "content_c"}},
+          {"field": {"Name": "created_at_c"}},
+          {"field": {"Name": "updated_at_c"}},
+          {"field": {"Name": "tags_c"}}
+        ],
+        orderBy: [{"fieldName": "updated_at_c", "sorttype": "DESC"}],
+        pagingInfo: {"limit": 100, "offset": 0}
+      };
+      
+      const response = await this.apperClient.fetchRecords(this.tableName, params);
+      
+      if (!response.success) {
+        console.error("Error fetching notes:", response.message);
+        toast.error(response.message);
+        return [];
+      }
+      
+      // Map database fields to UI expected format
+      const notes = (response.data || []).map(note => ({
+        Id: note.Id,
+        title: note.title_c || note.Name || "",
+        content: note.content_c || "",
+        createdAt: note.created_at_c || "",
+        updatedAt: note.updated_at_c || "",
+        tags: note.tags_c ? note.tags_c.split(",").map(tag => tag.trim()).filter(tag => tag) : []
+      }));
+      
+      return notes;
+    } catch (error) {
+      console.error("Error fetching notes:", error?.response?.data?.message || error.message);
+      return [];
+    }
   }
 
   async getById(id) {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const note = this.notes.find(n => n.Id === parseInt(id));
-        resolve(note ? { ...note } : null);
-      }, 200);
-    });
+    try {
+      if (!this.apperClient) this.initializeApperClient();
+      
+      const params = {
+        fields: [
+          {"field": {"Name": "Id"}},
+          {"field": {"Name": "Name"}},
+          {"field": {"Name": "title_c"}},
+          {"field": {"Name": "content_c"}},
+          {"field": {"Name": "created_at_c"}},
+          {"field": {"Name": "updated_at_c"}},
+          {"field": {"Name": "tags_c"}}
+        ]
+      };
+      
+      const response = await this.apperClient.getRecordById(this.tableName, parseInt(id), params);
+      
+      if (!response?.data) {
+        return null;
+      }
+      
+      const note = response.data;
+      return {
+        Id: note.Id,
+        title: note.title_c || note.Name || "",
+        content: note.content_c || "",
+        createdAt: note.created_at_c || "",
+        updatedAt: note.updated_at_c || "",
+        tags: note.tags_c ? note.tags_c.split(",").map(tag => tag.trim()).filter(tag => tag) : []
+      };
+    } catch (error) {
+      console.error(`Error fetching note ${id}:`, error?.response?.data?.message || error.message);
+      return null;
+    }
   }
 
   async getRecent(limit = 5) {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const sorted = [...this.notes].sort((a, b) => 
-          new Date(b.updatedAt) - new Date(a.updatedAt)
-        );
-        resolve(sorted.slice(0, limit));
-      }, 250);
-    });
+    try {
+      if (!this.apperClient) this.initializeApperClient();
+      
+      const params = {
+        fields: [
+          {"field": {"Name": "Id"}},
+          {"field": {"Name": "Name"}},
+          {"field": {"Name": "title_c"}},
+          {"field": {"Name": "content_c"}},
+          {"field": {"Name": "created_at_c"}},
+          {"field": {"Name": "updated_at_c"}},
+          {"field": {"Name": "tags_c"}}
+        ],
+        orderBy: [{"fieldName": "updated_at_c", "sorttype": "DESC"}],
+        pagingInfo: {"limit": limit, "offset": 0}
+      };
+      
+      const response = await this.apperClient.fetchRecords(this.tableName, params);
+      
+      if (!response.success) {
+        return [];
+      }
+      
+      const notes = (response.data || []).map(note => ({
+        Id: note.Id,
+        title: note.title_c || note.Name || "",
+        content: note.content_c || "",
+        createdAt: note.created_at_c || "",
+        updatedAt: note.updated_at_c || "",
+        tags: note.tags_c ? note.tags_c.split(",").map(tag => tag.trim()).filter(tag => tag) : []
+      }));
+      
+      return notes;
+    } catch (error) {
+      console.error("Error fetching recent notes:", error?.response?.data?.message || error.message);
+      return [];
+    }
   }
 
   async search(query) {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const searchTerm = query.toLowerCase();
-        const filtered = this.notes.filter(note =>
-          note.title.toLowerCase().includes(searchTerm) ||
-          note.content.toLowerCase().includes(searchTerm) ||
-          note.tags.some(tag => tag.toLowerCase().includes(searchTerm))
-        );
-        resolve([...filtered]);
-      }, 300);
-    });
+    try {
+      const allNotes = await this.getAll();
+      
+      if (!query) return allNotes;
+      
+      const searchTerm = query.toLowerCase();
+      return allNotes.filter(note =>
+        note.title.toLowerCase().includes(searchTerm) ||
+        note.content.toLowerCase().includes(searchTerm) ||
+        note.tags.some(tag => tag.toLowerCase().includes(searchTerm))
+      );
+    } catch (error) {
+      console.error("Error searching notes:", error?.response?.data?.message || error.message);
+      return [];
+    }
   }
 
   async create(noteData) {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const maxId = Math.max(...this.notes.map(n => n.Id), 0);
-        const now = new Date().toISOString();
-        const newNote = {
-          Id: maxId + 1,
-          ...noteData,
-          createdAt: now,
-          updatedAt: now,
-          tags: noteData.tags || []
-        };
-        this.notes.push(newNote);
-        this.saveToStorage();
-        resolve({ ...newNote });
-      }, 400);
-    });
+    try {
+      if (!this.apperClient) this.initializeApperClient();
+      
+      const now = new Date().toISOString();
+      const params = {
+        records: [{
+          Name: noteData.title || "",
+          title_c: noteData.title || "",
+          content_c: noteData.content || "",
+          created_at_c: now,
+          updated_at_c: now,
+          tags_c: Array.isArray(noteData.tags) ? noteData.tags.join(",") : ""
+        }]
+      };
+      
+      const response = await this.apperClient.createRecord(this.tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        toast.error(response.message);
+        return null;
+      }
+      
+      if (response.results) {
+        const successful = response.results.filter(r => r.success);
+        const failed = response.results.filter(r => !r.success);
+        
+        if (failed.length > 0) {
+          console.error(`Failed to create ${failed.length} notes:`, failed);
+          failed.forEach(record => {
+            if (record.message) toast.error(record.message);
+          });
+        }
+        
+        if (successful.length > 0) {
+          const created = successful[0].data;
+          return {
+            Id: created.Id,
+            title: created.title_c || created.Name || "",
+            content: created.content_c || "",
+            createdAt: created.created_at_c || "",
+            updatedAt: created.updated_at_c || "",
+            tags: created.tags_c ? created.tags_c.split(",").map(tag => tag.trim()).filter(tag => tag) : []
+          };
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("Error creating note:", error?.response?.data?.message || error.message);
+      return null;
+    }
   }
 
   async update(id, noteData) {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const index = this.notes.findIndex(n => n.Id === parseInt(id));
-        if (index !== -1) {
-          this.notes[index] = { 
-            ...this.notes[index], 
-            ...noteData,
-            updatedAt: new Date().toISOString()
-          };
-          this.saveToStorage();
-          resolve({ ...this.notes[index] });
-        } else {
-          resolve(null);
+    try {
+      if (!this.apperClient) this.initializeApperClient();
+      
+      const updateData = {};
+      if (noteData.title !== undefined) {
+        updateData.Name = noteData.title;
+        updateData.title_c = noteData.title;
+      }
+      if (noteData.content !== undefined) updateData.content_c = noteData.content;
+      if (noteData.tags !== undefined) {
+        updateData.tags_c = Array.isArray(noteData.tags) ? noteData.tags.join(",") : "";
+      }
+      updateData.updated_at_c = new Date().toISOString();
+      
+      const params = {
+        records: [{
+          Id: parseInt(id),
+          ...updateData
+        }]
+      };
+      
+      const response = await this.apperClient.updateRecord(this.tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        toast.error(response.message);
+        return null;
+      }
+      
+      if (response.results) {
+        const successful = response.results.filter(r => r.success);
+        const failed = response.results.filter(r => !r.success);
+        
+        if (failed.length > 0) {
+          console.error(`Failed to update ${failed.length} notes:`, failed);
+          failed.forEach(record => {
+            if (record.message) toast.error(record.message);
+          });
         }
-      }, 350);
-    });
+        
+        if (successful.length > 0) {
+          const updated = successful[0].data;
+          return {
+            Id: updated.Id,
+            title: updated.title_c || updated.Name || "",
+            content: updated.content_c || "",
+            createdAt: updated.created_at_c || "",
+            updatedAt: updated.updated_at_c || "",
+            tags: updated.tags_c ? updated.tags_c.split(",").map(tag => tag.trim()).filter(tag => tag) : []
+          };
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("Error updating note:", error?.response?.data?.message || error.message);
+      return null;
+    }
   }
 
   async delete(id) {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const index = this.notes.findIndex(n => n.Id === parseInt(id));
-        if (index !== -1) {
-          this.notes.splice(index, 1);
-          this.saveToStorage();
-          resolve(true);
-        } else {
-          resolve(false);
+    try {
+      if (!this.apperClient) this.initializeApperClient();
+      
+      const params = { 
+        RecordIds: [parseInt(id)]
+      };
+      
+      const response = await this.apperClient.deleteRecord(this.tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        toast.error(response.message);
+        return false;
+      }
+      
+      if (response.results) {
+        const successful = response.results.filter(r => r.success);
+        const failed = response.results.filter(r => !r.success);
+        
+        if (failed.length > 0) {
+          console.error(`Failed to delete ${failed.length} notes:`, failed);
+          failed.forEach(record => {
+            if (record.message) toast.error(record.message);
+          });
         }
-      }, 300);
-    });
+        return successful.length > 0;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Error deleting note:", error?.response?.data?.message || error.message);
+      return false;
+    }
   }
 }
 
