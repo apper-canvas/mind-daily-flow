@@ -1,0 +1,34 @@
+[
+  {
+    "Id": 1,
+    "title": "Meeting Notes - Product Strategy",
+    "content": "Discussed Q1 product roadmap. Key priorities: user authentication improvements, mobile app optimization, and new dashboard features. Next steps: create detailed specs by Friday.",
+    "createdAt": "2024-01-14T14:30:00Z",
+    "updatedAt": "2024-01-14T14:30:00Z",
+    "tags": ["meeting", "strategy", "roadmap"]
+  },
+  {
+    "Id": 2,
+    "title": "Ideas for User Onboarding",
+    "content": "1. Interactive tutorial for new users\n2. Progressive disclosure of features\n3. Personalized welcome flow\n4. Help tooltips on key actions\n5. Video tutorials for complex features",
+    "createdAt": "2024-01-13T16:45:00Z",
+    "updatedAt": "2024-01-14T09:20:00Z",
+    "tags": ["ideas", "ux", "onboarding"]
+  },
+  {
+    "Id": 3,
+    "title": "Technical Debt Items",
+    "content": "• Refactor authentication service\n• Update deprecated dependencies\n• Improve error handling in API calls\n• Add unit tests for utility functions\n• Optimize database queries",
+    "createdAt": "2024-01-12T11:20:00Z",
+    "updatedAt": "2024-01-14T10:00:00Z",
+    "tags": ["technical", "todo", "refactor"]
+  },
+  {
+    "Id": 4,
+    "title": "Customer Feedback Summary",
+    "content": "Recent feedback highlights:\n- Users want better mobile experience\n- Dashboard loading time needs improvement\n- Request for dark mode theme\n- More customization options needed\n- Integration with popular tools",
+    "createdAt": "2024-01-11T13:00:00Z",
+    "updatedAt": "2024-01-13T15:30:00Z",
+    "tags": ["feedback", "customers", "improvements"]
+  }
+]
